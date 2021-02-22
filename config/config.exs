@@ -17,7 +17,7 @@ config :nerves, :firmware, rootfs_overlay: "rootfs_overlay"
 # involved with firmware updates.
 
 config :shoehorn,
-  init: [:nerves_runtime, :nerves_init_gadget],
+  init: [:nerves_runtime, :nerved_pack, :vintage_net, :nerves_ssh],
   app: Mix.Project.config()[:app]
 
 # Use Ringlogger as the logger backend and remove :console.
@@ -30,29 +30,25 @@ if Mix.target() != :host do
   import_config "target.exs"
 end
 
-config :nerves_firmware_ssh,
-  authorized_keys: [
-    File.read!(Path.join(System.user_home!, ".ssh/id_rsa.pub"))
-  ]
-
 config :nerves_rpi3_wifi_picam, interface: :wlan0, port: 4001
 
-config :nerves_init_gadget,
-  node_name: :target01,
-  mdns_domain: "nerves.local",
-  address_method: :dhcp,
-  ifname: "wlan0"
-
-key_mgmt = System.get_env("NERVES_NETWORK_KEY_MGMT") || "WPA-PSK"
-
-config :nerves_network, :default,
-  wlan0: [
-    ssid: System.get_env("NERVES_NETWORK_SSID"),
-    psk: System.get_env("NERVES_NETWORK_PSK"),
-    key_mgmt: String.to_atom(key_mgmt)
-  ],
-  eth0: [
-    ipv4_address_method: :dhcp
-  ]
-
 config :picam_http, port: 4001
+
+config :vintage_net,
+  config: [
+    {"wlan0",
+      %{
+        type: VintageNetWiFi,
+        vintage_net_wifi: %{
+          networks: [
+            %{
+              key_mgmt: :wpa_psk,
+              ssid: System.get_env("NERVES_NETWORK_SSID"),
+              psk: System.get_env("NERVES_NETWORK_PSK"),
+            }
+          ]
+        },
+        ipv4: %{method: :dhcp},
+      }
+    }
+  ]
